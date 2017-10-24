@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+type Chain struct {
+	Blocks []*Block `jsonapi:"relation,blocks"`
+}
+
 type Block struct {
 	Index    int      `jsonapi:"primary,block"`
 	Data     *Payload `jsonapi:"relation,data"`
@@ -28,9 +32,20 @@ func main() {
 		Previous: nil,
 	}
 
+	chain := &Chain{
+		Blocks: []*Block{block},
+	}
+
 	http.HandleFunc("/block", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", jsonapi.MediaType)
 		if err := jsonapi.MarshalPayload(w, block); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	http.HandleFunc("/chain", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", jsonapi.MediaType)
+		if err := jsonapi.MarshalPayload(w, chain); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
