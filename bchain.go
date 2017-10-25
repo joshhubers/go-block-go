@@ -18,7 +18,7 @@ type Block struct {
 }
 
 type Payload struct {
-	Id   int    `jsonapi:primary,id"`
+	Id   int    `jsonapi:"primary,payload"`
 	Info string `jsonapi:"attr,info"`
 }
 
@@ -60,16 +60,25 @@ func main() {
 
 	http.HandleFunc("/payload", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
-			payload := new(Payload)
+			previousBlock := chain.Blocks[len(chain.Blocks)-1]
 
-			if err := jsonapi.UnmarshalPayload(r.Body, payload); err != nil {
+			payload := Payload{
+				Id: previousBlock.Data.Id + 1,
+			}
+
+			if err := jsonapi.UnmarshalPayload(r.Body, &payload); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			chain.AddBlock(*payload)
+			fmt.Println(payload)
+			chain.AddBlock(payload)
 			jsonapi.MarshalPayload(w, &chain)
 
+		}
+
+		if r.Method == "GET" {
+			jsonapi.MarshalPayload(w, &testP)
 		}
 	})
 
