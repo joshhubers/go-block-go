@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/google/jsonapi"
 	"log"
 	"net/http"
+
+	"github.com/boltdb/bolt"
+	"github.com/google/jsonapi"
 )
 
 type Chain struct {
@@ -34,8 +36,40 @@ func (bchain *Chain) AddBlock(data Payload) []*Block {
 	return bchain.Blocks
 }
 
-func main() {
+func (block *Block) save(db *bolt.DB) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("Block"))
+		err := b.Put([]byte("foo"), []byte("42"))
+		return err
+	})
+}
 
+func createBuckets(db *bolt.DB) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte("Block"))
+		_, err = tx.CreateBucketIfNotExists([]byte("Chain"))
+		_, err = tx.CreateBucketIfNotExists([]byte("Payload"))
+
+		if err != nil {
+			return fmt.Errorf("create bucket: %s", err)
+		}
+		return nil
+	})
+}
+
+func setupDB() *bolt.DB {
+	db, err := bolt.Open("my.db", 0600, nil)
+	err = createBuckets(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return db
+}
+
+func main() {
+	db := setupDB()
+
+	defer db.Close()
 	block := Block{
 		Index: 0,
 		Data: &Payload{
