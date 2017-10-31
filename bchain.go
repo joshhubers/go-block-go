@@ -23,7 +23,6 @@ type Block struct {
 }
 
 type Payload struct {
-	ID   int    `jsonapi:"primary,payload"`
 	Info string `jsonapi:"attr,info"`
 }
 
@@ -44,38 +43,10 @@ func (bchain *Chain) addBlock(data Payload) []*Block {
 		Previous: previousBlock,
 	}
 
+	newBlock.save()
+
 	bchain.Blocks = append(bchain.Blocks, newBlock)
 	return bchain.Blocks
-}
-
-func (block *Block) save(db *bolt.DB) error {
-	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("Block"))
-		err := b.Put([]byte("foo"), []byte("42"))
-		return err
-	})
-}
-
-func createBuckets(db *bolt.DB) error {
-	return db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte("Block"))
-		_, err = tx.CreateBucketIfNotExists([]byte("Chain"))
-		_, err = tx.CreateBucketIfNotExists([]byte("Payload"))
-
-		if err != nil {
-			return fmt.Errorf("create bucket: %s", err)
-		}
-		return nil
-	})
-}
-
-func setupDB() *bolt.DB {
-	db, err := bolt.Open("my.db", 0600, nil)
-	err = createBuckets(db)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return db
 }
 
 func getIP() string {
@@ -115,18 +86,26 @@ func determineStartState() string {
 	return text
 }
 
-func generateGenesis() Chain {
-	block := Block{
-		Index: 0,
-		Data: &Payload{
-			ID:   0,
-			Info: "This is my payload",
-		},
-		Previous: nil,
-	}
+func generateGenesis(db *bolt.DB) Chain {
+	chain := Chain{}
+	if noBlocksExist() {
+		fmt.Println("No genesis block found, creating new one...")
+		block := Block{
+			Index: 0,
+			Data: &Payload{
+				Info: "In the beginning...",
+			},
+			Previous: nil,
+		}
 
-	chain := Chain{
-		Blocks: []*Block{&block},
+		block.save()
+
+		chain = Chain{
+			Blocks: []*Block{&block},
+		}
+	} else {
+		fmt.Println("Previous blocks detected loading in blocks...")
+		chain = loadChain()
 	}
 
 	return chain
@@ -137,11 +116,7 @@ func beginServer(chain Chain) {
 		w.Header().Set("Content-Type", jsonapi.MediaType)
 
 		if r.Method == "POST" {
-			previousBlock := chain.Blocks[len(chain.Blocks)-1]
-
-			payload := Payload{
-				ID: previousBlock.Data.ID + 1,
-			}
+			payload := Payload{}
 
 			if err := jsonapi.UnmarshalPayload(r.Body, &payload); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -189,7 +164,7 @@ func goGetChain(targetIP string) Chain {
 }
 
 func main() {
-	db := setupDB()
+	setupDB()
 	defer db.Close()
 
 	myIP := getIP()
@@ -198,7 +173,7 @@ func main() {
 	chain := Chain{}
 
 	if len(targetIP) == 0 {
-		chain = generateGenesis()
+		chain = generateGenesis(db)
 	} else {
 		chain = goGetChain(targetIP)
 	}
