@@ -10,6 +10,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/google/jsonapi"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Chain struct {
@@ -27,8 +28,10 @@ type Payload struct {
 }
 
 type Node struct {
-	ID int `jsonapi:"primary,node"`
-	IP int `jsonapi:"attr,ip"`
+	ID       int    `jsonapi:"primary,node"`
+	IP       int    `jsonapi:"attr,ip"`
+	Username string `jsonapi:"attr,username"`
+	Hash     []byte `jsonapi:"attr, hash"`
 }
 
 type NodeList struct {
@@ -140,16 +143,23 @@ func beginServer(chain Chain) {
 	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", jsonapi.MediaType)
 		if r.Method == "POST" {
-			node := Node{
-				ID: 1,
-			}
+			node := Node{}
 
 			if err := jsonapi.UnmarshalPayload(r.Body, &node); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			fmt.Println(node)
+			//TODO: Check if username-ip is used already
+			//TODO: Check that username-ip is provided
+			hash, herr := bcrypt.GenerateFromPassword([]byte(string(node.Username)+string(node.IP)), bcrypt.DefaultCost)
+			if herr != nil {
+				// TODO: Properly handle error
+				log.Fatal(herr)
+			}
+
+			node.Hash = hash
+			node.save()
 		}
 
 	})

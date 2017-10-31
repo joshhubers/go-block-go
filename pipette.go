@@ -30,6 +30,25 @@ func (block *Block) save() error {
 	})
 }
 
+func (n *Node) save() error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("Node"))
+
+		if n.ID <= 0 {
+			id, _ := b.NextSequence()
+			n.ID = int(id)
+		}
+
+		encoded, err := json.Marshal(n)
+		if err != nil {
+			return err
+		}
+
+		err = b.Put([]byte(string(n.ID)), encoded)
+		return err
+	})
+}
+
 func loadChain() Chain {
 	blocks := []*Block{}
 
@@ -57,6 +76,7 @@ func loadChain() Chain {
 func createBuckets() error {
 	return db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte("Block"))
+		_, err = tx.CreateBucketIfNotExists([]byte("Node"))
 
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
