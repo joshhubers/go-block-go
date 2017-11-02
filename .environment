@@ -1,0 +1,4 @@
+#!/bin/bash
+
+alias dk_build="docker build -t goblockgo ."
+alias dk_run="docker run -p 4000:8080 goblockgo"

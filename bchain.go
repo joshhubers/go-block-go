@@ -150,6 +150,10 @@ func beginServer(chain Chain) {
 				return
 			}
 
+			if len(node.Username) > 0 {
+				http.Error(w, "Username must be provided", http.StatusBadRequest)
+			}
+
 			//TODO: Check if username-ip is used already
 			//TODO: Check that username-ip is provided
 			hash, herr := bcrypt.GenerateFromPassword([]byte(string(node.Username)+string(node.IP)), bcrypt.DefaultCost)

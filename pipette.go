@@ -102,10 +102,9 @@ func noBlocksExist() bool {
 
 func setupDB() {
 	tempDB, err := bolt.Open("my.db", 0600, nil)
+	db = tempDB
 	err = createBuckets()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	db = tempDB
 }
