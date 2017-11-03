@@ -1,4 +1,4 @@
-package main
+package chain
 
 import (
 	"bufio"
@@ -29,7 +29,7 @@ type Payload struct {
 
 type Node struct {
 	ID       int    `jsonapi:"primary,node"`
-	IP       int    `jsonapi:"attr,ip"`
+	IP       string `jsonapi:"attr,ip"`
 	Username string `jsonapi:"attr,username"`
 	Hash     []byte `jsonapi:"attr, hash"`
 }
