@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -29,7 +28,7 @@ type Payload struct {
 
 type Node struct {
 	ID       int    `jsonapi:"primary,node"`
-	IP       int    `jsonapi:"attr,ip"`
+	IP       string `jsonapi:"attr,ip"`
 	Username string `jsonapi:"attr,username"`
 	Hash     []byte `jsonapi:"attr, hash"`
 }
@@ -75,18 +74,6 @@ func getIP() string {
 	}
 
 	return myIPs[0]
-}
-
-func determineStartState() string {
-	fmt.Println("Enter the IP address you wish to connect to, or leave blank to start your own chain")
-	reader := bufio.NewReader(os.Stdin)
-	text, _ := reader.ReadString('\n')
-
-	if text == "\n" {
-		return ""
-	}
-
-	return text
 }
 
 func generateGenesis(db *bolt.DB) Chain {
@@ -178,11 +165,17 @@ func goGetChain(targetIP string) Chain {
 }
 
 func main() {
+	args := os.Args[1:]
+
 	setupDB()
 	defer db.Close()
 
 	myIP := getIP()
-	targetIP := determineStartState()
+	targetIP := ""
+
+	if len(args) > 0 {
+		targetIP = args[0]
+	}
 
 	chain := Chain{}
 
