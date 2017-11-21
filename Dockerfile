@@ -11,6 +11,4 @@ RUN go-wrapper install
 
 EXPOSE 8080
 
-WORKDIR /go/src/app
-
-CMD ["go-wrapper", "run"]
+CMD ["go-wrapper", "run", "echo ${HOSTIP}"]
